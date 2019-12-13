@@ -1,6 +1,6 @@
 #include  "pid.h"
 
-STATUS PID_Factor__Init(PID_Factor * _myPIDFactor, float _kp, float _ki, float _kd)
+STATUS PID_FACTOR__Init(PID_FACTOR * _myPIDFactor, float _kp, float _ki, float _kd)
 {
 	if (_myPIDFactor != NULL) {
 		_myPIDFactor->kp = _kp;
@@ -14,23 +14,24 @@ STATUS PID_Factor__Init(PID_Factor * _myPIDFactor, float _kp, float _ki, float _
 	
 }
 
-PID_Factor * PID_Factor__Create(float _kp, float _ki, float _kd)
+PID_FACTOR * PID_FACTOR__Create(float _kp, float _ki, float _kd)
 {
-	PID_Factor* __result = (PID_Factor*)malloc(sizeof(PID_Factor));
-	PID_Factor__Init(__result, _kp, _ki, _kd);
+	PID_FACTOR* __result = (PID_FACTOR*)malloc(sizeof(PID_FACTOR));
+	PID_FACTOR__Init(__result, _kp, _ki, _kd);
 	return __result;
 }
 
-STATUS PID__Init(PID * _myPID, PID_Factor* _myFactors, double * _in, double * _out, double * _setPoint) {
+STATUS PID__Init(PID * _myPID, PID_FACTOR* _myFactors, double * _in, double * _out, double  _setPoint) {
 	if(_myPID != NULL){
 		_myPID->pidFactor = _myFactors;
 		_myPID->in = _in;
 		_myPID->out = _out;
 		_myPID->setPoint = _setPoint;
-		//setting private variable is 0
+		//setting default value is 0
 		_myPID->err = 0;
 		_myPID->sumErr = 0;
-		_myPID->previousErr = 0;
+		_myPID->lastErr = 0;
+		_myPID->isUseOutputLimit = NO;
 		//
 		return SUCCESS;
 	}
@@ -39,7 +40,7 @@ STATUS PID__Init(PID * _myPID, PID_Factor* _myFactors, double * _in, double * _o
 	}
 }
 
-PID * PID__Create(PID_Factor* _myFactors, double * _in, double * _out, double * _setPoint)
+PID * PID__Create(PID_FACTOR* _myFactors, double * _in, double * _out, double  _setPoint)
 {
 
 	PID* __result = (PID*)malloc(sizeof(PID));
@@ -49,19 +50,73 @@ PID * PID__Create(PID_Factor* _myFactors, double * _in, double * _out, double * 
 	return __result;
 }
 
+void PID__Caculate(PID * _myPID) {
+	//
+	double in = *_myPID->in;
+	_myPID->err = _myPID->setPoint - in;
+	//check first state
+	if (_myPID->lastErr == 0) {
+		_myPID->sumErr = 0;
+	}
+	else {
+		_myPID->sumErr += _myPID->err*(double)PERIOD_UPDATE_PID +
+						0.5*(_myPID->lastErr - _myPID->err)*(double)PERIOD_UPDATE_PID;
+	}
+	
+	//caculate
+
+	double __result =	_myPID->pidFactor->kp*_myPID->err +
+						_myPID->pidFactor->ki*_myPID->sumErr +
+						_myPID->pidFactor->kd*(_myPID->err - _myPID->lastErr) / (double)PERIOD_UPDATE_PID;
+				 
+	//
+	if (_myPID->isUseOutputLimit == YES) {
+		if (__result > PID_OUTPUT_MAX) {
+			*_myPID->out = PID_OUTPUT_MAX;
+		}
+		else if (__result < PID_OUTPUT_MIN) {
+			*_myPID->out = PID_OUTPUT_MIN;
+		}
+		else {
+			*_myPID->out = __result;
+		}
+	}
+	else {
+		*_myPID->out = __result;
+	}
+
+	//backup variable
+	_myPID->lastErr = _myPID->err;
+}
+
+void PID__SetTurning(PID * _myPID, float _kp, float _ki, float _kd) {
+	PID_FACTOR__Init(_myPID->pidFactor, _kp, _ki, _kd);
+}
+
+void PID__OnOutputLimitFlag(PID * _myPID) {
+	_myPID->isUseOutputLimit = YES;
+}
+
+void PID__OffOutputLimitFlag(PID * _myPID) {
+	_myPID->isUseOutputLimit = NO;
+}
+
+
+
 void printClassPID(PID  _myPID) {
 	printf("%s\n", "-----------------------------------");
-	printClassPID_Factor(*_myPID.pidFactor);
+	printClassPID_FACTOR(*_myPID.pidFactor);
 	printf("%s%f\n", "Value of [in] : ", *_myPID.in);
 	printf("%s%f\n", "Value of [out] : ", *_myPID.out);
-	printf("%s%f\n", "Value of [setpoint] : ", *_myPID.setPoint);
+	printf("%s%f\n", "Value of [setpoint] : ", _myPID.setPoint);
+	printf("%s%d\n", "Value of [isTurnLimit] : ", _myPID.isUseOutputLimit);
 	printf("%s%f\n", "Value of [err] : ", _myPID.err);
 	printf("%s%f\n", "Value of [sum of err] : ", _myPID.sumErr);
-	printf("%s%f\n", "Value of [previous err] : ", _myPID.previousErr);
+	printf("%s%f\n", "Value of [last err] : ", _myPID.lastErr);
 	
 }
 
-void printClassPID_Factor(PID_Factor  _myFactors) {
+void printClassPID_FACTOR(PID_FACTOR  _myFactors) {
 	printf("%s%f\n", "Value of [Kp] : ", _myFactors.kp);
 	printf("%s%f\n", "Value of [Ki] : ", _myFactors.ki);
 	printf("%s%f\n", "Value of [Kd] : ", _myFactors.kd);

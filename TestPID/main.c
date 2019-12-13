@@ -1,19 +1,20 @@
 #include <stdio.h>
 #include "pid.h"
 
-void main() {
-	double val = 10;
-	double input = 0;
-	double* output = &val;
-	double setPoint = 100;
-	PID_Factor* myPIDFactor = PID_Factor__Create(10, 20, 0.01);
-	input = 2;
+#define FLOAT_VAR 1.0/1000.0
 
-	PID* myPID = PID__Create(myPIDFactor, &input, output, &setPoint);
-	input = 7;
-	PID_Factor__Init(myPIDFactor,2,5,7);
+void main() {
+	double input = 1;  //sensor
+	double output = 0;
+	PID_FACTOR* myPIDFactor = PID_FACTOR__Create(1, 1, 0);
+	PID* myPID = PID__Create(myPIDFactor, &input, &output, 100);
+	PID__OnOutputLimitFlag(myPID);
 
 	printClassPID(*myPID);
-
+	PID__Caculate(myPID);
+	printClassPID(*myPID);
+	PID__Caculate(myPID);
+	printClassPID(*myPID);
+	/*printf("%f", output);*/
 	system("pause");
 }
