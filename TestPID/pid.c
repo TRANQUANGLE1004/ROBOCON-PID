@@ -6,10 +6,10 @@ STATUS PID_FACTOR__Init(PID_FACTOR * _myPIDFactor, float _kp, float _ki, float _
 		_myPIDFactor->kp = _kp;
 		_myPIDFactor->ki = _ki;
 		_myPIDFactor->kd = _kd;
-		return SUCCESS;
+		return _SUCCESS;
 	}
 	else {
-		return FAILED;
+		return _FAILED;
 	}
 	
 }
@@ -17,11 +17,34 @@ STATUS PID_FACTOR__Init(PID_FACTOR * _myPIDFactor, float _kp, float _ki, float _
 PID_FACTOR * PID_FACTOR__Create(float _kp, float _ki, float _kd)
 {
 	PID_FACTOR* __result = (PID_FACTOR*)malloc(sizeof(PID_FACTOR));
-	PID_FACTOR__Init(__result, _kp, _ki, _kd);
-	return __result;
+	if (PID_FACTOR__Init(__result, _kp, _ki, _kd) == _SUCCESS) {
+		return __result;
+	}
+	return NULL;
+	
 }
 
-STATUS PID__Init(PID * _myPID, PID_FACTOR* _myFactors, double * _in, double * _out, double  _setPoint) {
+STATUS PID_OUT_LIMIT__Init(PID_OUT_LIMIT * _myLimit, double _min, double _max)
+{
+	if (_myLimit != NULL) {
+		_myLimit->min = _min;
+		_myLimit->max = _max;
+		return _SUCCESS;
+	}
+	else {
+		return _FAILED;
+	}
+}
+
+PID_OUT_LIMIT * PID_OUT_LIMIT__Create(double _min, double _max) {
+	PID_OUT_LIMIT * __result = (PID_OUT_LIMIT *)malloc(sizeof(PID_OUT_LIMIT));
+	if (PID_OUT_LIMIT__Init(__result, _min, _max) == _SUCCESS) {
+		return __result;
+	}
+	return NULL;
+}
+
+STATUS PID__Init(PID * _myPID, PID_FACTOR* _myFactors, double * _in, double * _out, double  _setPoint, PID_OUT_LIMIT _limit) {
 	if(_myPID != NULL){
 		_myPID->pidFactor = _myFactors;
 		_myPID->in = _in;
@@ -32,20 +55,21 @@ STATUS PID__Init(PID * _myPID, PID_FACTOR* _myFactors, double * _in, double * _o
 		_myPID->sumErr = 0;
 		_myPID->lastErr = 0;
 		_myPID->isUseOutputLimit = NO;
+		_myPID->outLimit = _limit;
 		//
-		return SUCCESS;
+		return _SUCCESS;
 	}
 	else {
-		return FAILED;
+		return _FAILED;
 	}
 }
 
-PID * PID__Create(PID_FACTOR* _myFactors, double * _in, double * _out, double  _setPoint)
+PID * PID__Create(PID_FACTOR* _myFactors, double * _in, double * _out, double  _setPoint, PID_OUT_LIMIT _limit)
 {
 
 	PID* __result = (PID*)malloc(sizeof(PID));
 	
-	PID__Init(__result, _myFactors, _in, _out, _setPoint);
+	PID__Init(__result, _myFactors, _in, _out, _setPoint,_limit);
 
 	return __result;
 }
@@ -71,11 +95,11 @@ void PID__Caculate(PID * _myPID) {
 				 
 	//
 	if (_myPID->isUseOutputLimit == YES) {
-		if (__result > PID_OUTPUT_MAX) {
-			*_myPID->out = PID_OUTPUT_MAX;
+		if (__result > _myPID->outLimit.max) {
+			*_myPID->out = _myPID->outLimit.max;
 		}
-		else if (__result < PID_OUTPUT_MIN) {
-			*_myPID->out = PID_OUTPUT_MIN;
+		else if (__result < _myPID->outLimit.min) {
+			*_myPID->out = _myPID->outLimit.min;
 		}
 		else {
 			*_myPID->out = __result;
@@ -113,7 +137,9 @@ void printClassPID(PID  _myPID) {
 	printf("%s%f\n", "Value of [err] : ", _myPID.err);
 	printf("%s%f\n", "Value of [sum of err] : ", _myPID.sumErr);
 	printf("%s%f\n", "Value of [last err] : ", _myPID.lastErr);
-	
+	printf("%s%f\n", "Value of [MIN OUT] : ", _myPID.outLimit.min);
+	printf("%s%f\n", "Value of [MAX  OUT] : ", _myPID.outLimit.max);
+
 }
 
 void printClassPID_FACTOR(PID_FACTOR  _myFactors) {

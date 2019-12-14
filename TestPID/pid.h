@@ -8,11 +8,7 @@
 */
 
 /* Desciption XOXO
-			 _______________________
-			 |			            |
- in -------->|			            | ------------>out
-			 |			            |
- 			 |______________________|
+
 
  */
 #ifndef _PID_H_
@@ -40,9 +36,9 @@ typedef enum BOOLs {
 }BOOL;
 
 typedef enum STATUSs {
-	SUCCESS = 1,
-	FAILED = - 1,
-	UNKNOW = 0
+	_SUCCESS = 1,
+	_FAILED = - 1,
+	_UNKNOW = 0
 }STATUS;
 
 typedef struct PID_FACTORs {
@@ -70,6 +66,8 @@ typedef struct PID_OUT_LIMITs {
 }PID_OUT_LIMIT
 ;
 
+STATUS PID_OUT_LIMIT__Init(PID_OUT_LIMIT* _myLimit,double _min,double _max);
+PID_OUT_LIMIT* PID_OUT_LIMIT__Create(double _min, double _max);
 
 typedef struct PIDs {
 		
@@ -84,16 +82,17 @@ typedef struct PIDs {
 		double err;							// this is error = setpoint - current value(in)
 		double sumErr;						// this is SUM of err use in integral
 		//backup value
-		double lastErr;					// this is last err
-
+		double lastErr;						// this is last err
+		//
+		PID_OUT_LIMIT outLimit;				// MIN<------out------>MAX
 		// status variable
 		BOOL isUseOutputLimit;				// default is 0 (Not use)
 }PID
 ;
 
 // there are 2 way to create PID
-STATUS PID__Init(PID* _myPID, PID_FACTOR* _myFactors,double* _in,double* _out,double _setPoint);				// Init value PID
-PID* PID__Create(PID_FACTOR* _myFactors, double* _in, double* _out, double _setPoint);							// Create a new PID
+STATUS PID__Init(PID* _myPID, PID_FACTOR* _myFactors,double* _in,double* _out,double _setPoint, PID_OUT_LIMIT _limit);				// Init value PID
+PID* PID__Create(PID_FACTOR* _myFactors, double* _in, double* _out, double _setPoint, PID_OUT_LIMIT _limit);												// Create a new PID
 
 
 // this function will be call in Timer_Vector()
